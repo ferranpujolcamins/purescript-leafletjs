@@ -8,17 +8,15 @@ module Leaflet.Core.DOM
 
 import Prelude
 
-import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Class (class MonadEff, liftEff)
+import Effect (Effect)
+import Effect.Class (class MonadEffect, liftEffect)
 
 import Data.Array as A
 import Data.Foldable (class Foldable)
 import Data.Maybe (Maybe(..))
 import Data.Function.Uncurried (Fn3, Fn2, runFn3, runFn2)
 
-import DOM (DOM)
-import DOM.Node.Types (Element)
-import DOM.Classy.Element (class IsElement, toElement)
+import Web.DOM (DOM)
 
 import Leaflet.Core.Types (Point)
 import Leaflet.Util ((×))

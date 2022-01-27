@@ -13,18 +13,17 @@ import Prelude
 import Color (Color)
 import Color as Color
 
-import Control.Monad.Eff (Eff, foreachE)
+import Effect (Effect, foreachE)
 
 import Data.Array as A
 import Data.ArrayBuffer.Types (Uint8ClampedArray)
 import Data.Function.Uncurried (Fn2, Fn3, runFn3, runFn2, Fn4, runFn4)
 
-import DOM (DOM)
-import DOM.HTML (window)
-import DOM.HTML.Window (document)
-import DOM.HTML.Types (HTMLDocument)
-import DOM.Node.Types (Document, Element)
-import DOM.Node.Document (createElement)
+import Web.DOM (DOM)
+import Web.HTML (window)
+import Web.HTML.Window (document)
+import Web.HTML.HTMLDocument (HTMLDocument)
+import Web.DOM.Document (Document, createElement)
 
 import Graphics.Canvas as G
 

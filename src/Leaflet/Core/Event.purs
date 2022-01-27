@@ -7,14 +7,14 @@ module Leaflet.Core.Event
 
 import Prelude
 
-import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Class (class MonadEff, liftEff)
+import Effect (Effect)
+import Effect.Class (class MonadEffect, liftEffect)
 
 import Data.Function.Uncurried (Fn3, Fn4, runFn3, runFn4)
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 
-import DOM (DOM)
+import Web.DOM (DOM)
 
 import Leaflet.Util (type (×))
 import Leaflet.Core.Types (Point, Zoom, Event, LatLng)

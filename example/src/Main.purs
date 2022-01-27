@@ -3,7 +3,7 @@ module Main where
 import Prelude
 
 import Color as Color
-import Control.Monad.Eff (Eff)
+import Effect (Effect)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Random (RANDOM, random)
 import Control.Monad.Eff.Ref (REF)

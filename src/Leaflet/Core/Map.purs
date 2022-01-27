@@ -17,16 +17,15 @@ module Leaflet.Core.Map
 
 import Prelude
 
-import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Class (class MonadEff, liftEff)
+import Effect (Effect)
+import Effect.Class (class MonadEffect, liftEffect)
 
 import Data.Function.Uncurried (Fn2, Fn3, runFn2, runFn3)
-import Data.StrMap as SM
+import Foreign.Object as SM
 import Data.Tuple (Tuple(..))
 
-import DOM (DOM)
-import DOM.Node.Types (Element)
-import DOM.Classy.Element (class IsElement, toElement)
+import Web.DOM (DOM)
+import Web.DOM.Element (class IsElement, toElement)
 
 import Leaflet.Core.Converter (converter)
 import Leaflet.Core.Types as T

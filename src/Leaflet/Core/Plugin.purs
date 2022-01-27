@@ -4,14 +4,14 @@ module Leaflet.Core.Plugin
 
 import Prelude
 
-import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Class (class MonadEff, liftEff)
-import Control.Monad.Eff.Ref (REF, Ref, newRef, writeRef, readRef)
+import Effect (Effect)
+import Effect.Class (class MonadEffect, liftEffect)
+import Effect.Ref (REF, Ref, newRef, writeRef, readRef)
 
 import Data.Function.Uncurried (Fn2, Fn4, runFn4, mkFn2)
 import Data.Maybe (Maybe(..))
 
-import DOM (DOM)
+import Web.DOM (DOM)
 
 import Leaflet.Core.Types as T
 

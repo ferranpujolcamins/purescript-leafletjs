@@ -26,8 +26,8 @@ module Leaflet.Core.Layer
 
 import Prelude
 
-import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Class (class MonadEff, liftEff)
+import Effect (Effect)
+import Effect.Class (class MonadEffect, liftEffect)
 
 import Data.Array as A
 import Data.Foldable (class Foldable, foldMap)
@@ -35,7 +35,7 @@ import Data.Function.Uncurried (Fn2, Fn3, runFn2, runFn3)
 import Data.Maybe (Maybe(..))
 import Leaflet.Core.Types (LeafURIRef)
 
-import DOM (DOM)
+import Web.DOM (DOM)
 
 import Leaflet.Core.Converter (ConvertDict, converter)
 import Leaflet.Core.Types as T

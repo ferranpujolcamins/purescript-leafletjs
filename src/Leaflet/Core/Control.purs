@@ -6,13 +6,13 @@ module Leaflet.Core.Control
 
 import Prelude
 
-import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Class (class MonadEff, liftEff)
+import Effect (Effect)
+import Effect.Class (class MonadEffect, liftEffect)
 
-import Data.StrMap as SM
+import Foreign.Object as SM
 import Data.Function.Uncurried (Fn2, runFn2, Fn3, runFn3)
 
-import DOM (DOM)
+import Web.DOM (DOM)
 
 import Leaflet.Core.Types as T
 

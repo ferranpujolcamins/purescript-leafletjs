@@ -5,9 +5,9 @@ module Leaflet.Plugin.Heatmap
 
 import Prelude
 
-import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Class (class MonadEff, liftEff)
-import Control.Monad.Eff.Ref (Ref, REF)
+import Effect (Effect)
+import Effect.Class (class MonadEffect, liftEffect)
+import Effect.Ref (Ref)
 import Control.Monad.Maybe.Trans (MaybeT(..), runMaybeT)
 
 import Data.Array as A
@@ -15,12 +15,12 @@ import Data.Foldable (class Foldable, for_, intercalate)
 import Data.Int as Int
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
-import Data.StrMap as SM
+import Foreign.Object as SM
 import Data.Tuple (fst, snd)
 
-import DOM (DOM)
-import DOM.Classy.Element (setAttribute)
-import DOM.Classy.Node (appendChild, removeChild)
+import Web.DOM (DOM)
+import Web.DOM.Element (setAttribute)
+import Web.DOM.Node (appendChild, removeChild)
 
 import Leaflet.Core as LC
 import Leaflet.Plugin.Heatmap.Internal.Canvas as C
