@@ -19,11 +19,12 @@ import Data.Array as A
 import Data.ArrayBuffer.Types (Uint8ClampedArray)
 import Data.Function.Uncurried (Fn2, Fn3, runFn3, runFn2, Fn4, runFn4)
 
-import Web.DOM (DOM)
 import Web.HTML (window)
 import Web.HTML.Window (document)
 import Web.HTML.HTMLDocument (HTMLDocument)
+import Web.HTML.HTMLElement (HTMLElement)
 import Web.DOM.Document (Document, createElement)
+import Web.DOM.Element (Element)
 
 import Graphics.Canvas as G
 
@@ -44,7 +45,7 @@ asIntArray = unsafeCoerce
 fromIntArray ∷ Array Int → Uint8ClampedArray
 fromIntArray = unsafeCoerce
 
-createCanvas ∷ ∀ e. Eff (dom ∷ DOM|e) G.CanvasElement
+createCanvas ∷ Effect G.CanvasElement
 createCanvas = do
   w ← window
   doc ← document w
@@ -58,69 +59,66 @@ createCanvas = do
 elementToCanvas ∷ Element → G.CanvasElement
 elementToCanvas = unsafeCoerce
 
-canvasToElement ∷ G.CanvasElement → Element
+canvasToElement ∷ G.CanvasElement → HTMLElement
 canvasToElement = unsafeCoerce
 
 type HeatmapPoint = { x ∷ Number, y ∷ Number, i ∷ Number }
 
 gradientData
-  ∷ ∀ e
-  . Array {color ∷ Color, stop ∷ Number }
-  → Eff (canvas ∷ G.CANVAS, dom ∷ DOM|e) (Array Int)
+  ∷ Array {color ∷ Color, stop ∷ Number }
+  → Effect (Array Int)
 gradientData stops = do
   canvas ← createCanvas
-  _ ← G.setCanvasDimensions {width: 1.0, height: 256.0} canvas
+  _ ← G.setCanvasDimensions canvas {width: 1.0, height: 256.0}
   ctx ← G.getContext2D canvas
-  gradient ← G.createLinearGradient {x0: 0.0, y0: 0.0, x1: 0.0, y1: 256.0}  ctx
+  gradient ← G.createLinearGradient ctx {x0: 0.0, y0: 0.0, x1: 0.0, y1: 256.0}
   foreachE stops \{color, stop} → do
-    void $ G.addColorStop stop (Color.cssStringRGBA color) gradient
-  _ ← G.setGradientFillStyle gradient ctx
-  _ ← G.fillRect ctx { x: 0.0, y: 0.0, h: 256.0, w: 1.0 }
+    void $ G.addColorStop gradient stop (Color.cssStringRGBA color)
+  _ ← G.setGradientFillStyle ctx gradient
+  _ ← G.fillRect ctx { x: 0.0, y: 0.0, height: 256.0, width: 1.0 }
   imgData ← G.getImageData ctx 0.0 0.0 1.0 256.0
-  effPure $ asIntArray $ G.imageDataBuffer imgData
+  effectPure $ asIntArray $ G.imageDataBuffer imgData
 
 radius
-  ∷ ∀ e
-  . Number
+  ∷ Number
   → Number
-  → Eff (canvas ∷ G.CANVAS, dom ∷ DOM|e) G.CanvasImageSource
+  → Effect G.CanvasImageSource
 radius r blur = do
   canvas ← createCanvas
-  _ ← G.setCanvasDimensions { width: dia, height: dia } canvas
+  _ ← G.setCanvasDimensions canvas { width: dia, height: dia }
 
   ctx ← G.getContext2D canvas
-  _ ← G.setShadowOffsetX dia ctx
-  _ ← G.setShadowOffsetY dia ctx
-  _ ← G.setShadowBlur blur ctx
-  _ ← G.setShadowColor "black" ctx
+  _ ← G.setShadowOffsetX ctx dia
+  _ ← G.setShadowOffsetY ctx dia
+  _ ← G.setShadowBlur ctx blur
+  _ ← G.setShadowColor ctx "black"
   _ ← G.beginPath ctx
-  _ ← G.arc ctx {x: -1.0 * rad, y: -1.0 * rad, r: r, start: 0.0, end: Math.pi * 2.0 }
+  _ ← G.arc ctx {x: -1.0 * rad, y: -1.0 * rad, radius: r, start: 0.0, end: Math.pi * 2.0 }
   _ ← G.closePath ctx
   _ ← G.fill ctx
 
-  effPure $ G.canvasElementToImageSource canvas
+  effectPure $ G.canvasElementToImageSource canvas
   where
   rad = r + blur
   dia = rad + rad
 
 draw
-  ∷ ∀ e
-  . G.CanvasElement
+  ∷ G.CanvasElement
   → HeatmapOptions
   → Array HeatmapPoint
-  → Eff (canvas ∷ G.CANVAS, dom ∷ DOM|e) Unit
+  → Effect Unit
 draw canvas opts points = do
   gr ← gradientData opts.colorStops
   circle ← radius opts.radius opts.blur
-  h ← G.getCanvasHeight canvas
-  w ← G.getCanvasWidth canvas
+  height ← G.getCanvasHeight canvas
+  width ← G.getCanvasWidth canvas
   ctx ← G.getContext2D canvas
-  _ ← G.clearRect ctx { x: 0.0, y: 0.0, h, w }
+  _ ← G.clearRect ctx { x: 0.0, y: 0.0, height, width }
   foreachE points \{x, y, i} → do
     _ ← G.setGlobalAlpha ctx $ Math.max (i / opts.maxIntensity) opts.minOpacity
     _ ← G.drawImage ctx circle (x - opts.radius) (y - opts.radius)
-    effUnit
-  imgData ← G.getImageData ctx 0.0 0.0 w h
+    effectUnit
+  imgData ← G.getImageData ctx 0.0 0.0 width height
   let
     newImageData =
       runFn2 modifyImageData imgData
@@ -168,8 +166,8 @@ colorize grs circle =
   len ∷ Int
   len = A.length circle
 
-effUnit ∷ ∀ e. Eff e Unit
-effUnit = effPure unit
+effectUnit ∷ Effect Unit
+effectUnit = effectPure unit
 
-effPure ∷ ∀ e a. a → Eff e a
-effPure = pure
+effectPure ∷ ∀ a. a → Effect a
+effectPure = pure

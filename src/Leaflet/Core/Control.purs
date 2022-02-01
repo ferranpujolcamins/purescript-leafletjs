@@ -6,49 +6,49 @@ module Leaflet.Core.Control
 
 import Prelude
 
+import Prim.Row (class Union)
+
 import Effect (Effect)
 import Effect.Class (class MonadEffect, liftEffect)
 
-import Foreign.Object as SM
+import Foreign.Object as Foreign
 import Data.Function.Uncurried (Fn2, runFn2, Fn3, runFn3)
-
-import Web.DOM (DOM)
 
 import Leaflet.Core.Types as T
 
 foreign import layers_
-  ∷ ∀ e r. Fn3 (SM.StrMap T.Layer) (SM.StrMap T.LayerGroup) r (Eff (dom ∷ DOM|e) T.Control)
+  ∷ ∀ r. Fn3 (Foreign.Object T.Layer) (Foreign.Object T.LayerGroup) r (Effect T.Control)
 
 foreign import addTo_
-  ∷ ∀ e. Fn2 T.Leaflet T.Control (Eff (dom ∷ DOM|e) T.Control)
+  ∷ Fn2 T.Leaflet T.Control (Effect T.Control)
 
 foreign import remove_
-  ∷ ∀ e. T.Control → Eff (dom ∷ DOM|e) Unit
+  ∷ T.Control → Effect Unit
 
 layers
-  ∷ ∀ m e r1 r2
-  . MonadEff (dom ∷ DOM|e) m
+  ∷ ∀ m r1 r2
+  . MonadEffect m
   ⇒ Union r1 r2 (T.LayerControlConf ())
-  ⇒ SM.StrMap T.Layer
-  → SM.StrMap T.LayerGroup
+  ⇒ Foreign.Object T.Layer
+  → Foreign.Object T.LayerGroup
   → Record r1
   → m T.Control
 layers bs os r =
-  liftEff $ runFn3 layers_ bs os r
+  liftEffect $ runFn3 layers_ bs os r
 
 addTo
-  ∷ ∀ m e
-  . MonadEff (dom ∷ DOM|e) m
+  ∷ ∀ m
+  . MonadEffect m
   ⇒ T.Leaflet
   → T.Control
   → m T.Control
 addTo leaf control =
-  liftEff $ runFn2 addTo_ leaf control
+  liftEffect $ runFn2 addTo_ leaf control
 
 remove
-  ∷ ∀ m e
-  . MonadEff (dom ∷ DOM|e) m
+  ∷ ∀ m
+  . MonadEffect m
   ⇒ T.Control
   → m Unit
 remove control =
-  liftEff $ remove_ control
+  liftEffect $ remove_ control

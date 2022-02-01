@@ -2,7 +2,6 @@ module Leaflet.Core.Types where
 
 import Color (Color)
 import Data.Tuple (Tuple)
-import Type.Data.Boolean (kind Boolean)
 import URI (URIRef)
 import URI.URIRef (URIRefOptions)
 import Unsafe.Coerce (unsafeCoerce)

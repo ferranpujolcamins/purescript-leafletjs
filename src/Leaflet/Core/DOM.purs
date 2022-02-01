@@ -8,76 +8,70 @@ module Leaflet.Core.DOM
 
 import Prelude
 
-import Effect (Effect)
-import Effect.Class (class MonadEffect, liftEffect)
-
 import Data.Array as A
 import Data.Foldable (class Foldable)
-import Data.Maybe (Maybe(..))
 import Data.Function.Uncurried (Fn3, Fn2, runFn3, runFn2)
-
-import Web.DOM (DOM)
-
+import Data.Maybe (Maybe(..))
+import Effect (Effect)
+import Effect.Class (class MonadEffect, liftEffect)
 import Leaflet.Core.Types (Point)
 import Leaflet.Util ((×))
+import Web.HTML (HTMLElement)
 
 foreign import any3d_
-  ∷ ∀ e. Eff (dom ∷ DOM|e) Boolean
+  ∷ Effect Boolean
 
 foreign import testProp_
-  ∷ ∀ e a. Fn3 a (a → Maybe a) (Array String) (Eff (dom ∷ DOM|e) (Maybe String))
+  ∷ ∀ a. Fn3 a (a → Maybe a) (Array String) (Effect (Maybe String))
 
 foreign import setStyle_
-  ∷ ∀ e. Fn3 String String Element (Eff (dom ∷ DOM|e) Unit)
+  ∷ Fn3 String String HTMLElement (Effect Unit)
 
 foreign import setPosition_
-  ∷ ∀ e. Fn2 Element (Array Int) (Eff (dom ∷ DOM|e) Unit)
+  ∷ Fn2 HTMLElement (Array Int) (Effect Unit)
 
 foreign import setTransform_
-  ∷ ∀ e. Fn3 Element (Array Int) Number (Eff (dom ∷ DOM|e) Unit)
+  ∷ Fn3 HTMLElement (Array Int) Number (Effect Unit)
 
 testProp
-  ∷ ∀ e m f
-  . MonadEff (dom ∷ DOM|e) m
+  ∷ ∀ m f
+  . MonadEffect m
   ⇒ Foldable f
   ⇒ f String
   → m (Maybe String)
 testProp a =
-  liftEff $ runFn3 testProp_ Nothing Just $ A.fromFoldable a
+  liftEffect $ runFn3 testProp_ Nothing Just $ A.fromFoldable a
 
 setStyle
-  ∷ ∀ e m n
-  . IsElement n
-  ⇒ MonadEff (dom ∷ DOM|e) m
+  ∷ ∀ m
+  . MonadEffect m
   ⇒ String
   → String
-  → n
+  → HTMLElement
   → m Unit
-setStyle k v n = liftEff $ runFn3 setStyle_ k v $ toElement n
+setStyle k v n = liftEffect $ runFn3 setStyle_ k v n
 
 any3d
-  ∷ ∀ e m
-  . MonadEff (dom ∷ DOM|e) m
+  ∷ ∀ m
+  . MonadEffect m
   ⇒ m Boolean
-any3d = liftEff any3d_
+any3d = liftEffect any3d_
 
 setPosition
-  ∷ ∀ m e n
-  . MonadEff (dom ∷ DOM|e) m
-  ⇒ IsElement n
-  ⇒ n
+  ∷ ∀ m
+  . MonadEffect m
+  ⇒ HTMLElement
   → Point
   → m Unit
 setPosition n (a × b) =
-  liftEff $ runFn2 setPosition_ (toElement n) [a, b]
+  liftEffect $ runFn2 setPosition_ n [a, b]
 
 setTransform
-  ∷ ∀ e m n
-  . IsElement n
-  ⇒ MonadEff (dom ∷ DOM|e) m
-  ⇒ n
+  ∷ ∀ m
+  . MonadEffect m
+  ⇒ HTMLElement
   → Point
   → Number
   → m Unit
 setTransform n (a × b) scale =
-  liftEff $ runFn3 setTransform_ (toElement n) [a, b] scale
+  liftEffect $ runFn3 setTransform_ n [a, b] scale

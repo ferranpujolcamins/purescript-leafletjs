@@ -3,15 +3,7 @@ module Main where
 import Prelude
 
 import Color as Color
-import Effect (Effect)
-import Control.Monad.Eff.Class (liftEff)
-import Control.Monad.Eff.Random (RANDOM, random)
-import Control.Monad.Eff.Ref (REF)
 import Control.Monad.Maybe.Trans (MaybeT(..), runMaybeT)
-import DOM (DOM)
-import DOM.Classy.ParentNode (class IsParentNode, querySelector)
-import DOM.HTML (window)
-import DOM.HTML.Window (document)
 import Data.Array as A
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
@@ -20,7 +12,9 @@ import Data.String.NonEmpty as NES
 import Data.These (These(..))
 import Data.Traversable as F
 import Data.Tuple (Tuple(..))
-import Graphics.Canvas (CANVAS)
+import Effect (Effect)
+import Effect.Class (liftEffect)
+import Effect.Random (random)
 import HeatmapLayerData (heatmapLayerData)
 import Leaflet.Core (mkLeafURIRef)
 import Leaflet.Core as LC
@@ -36,38 +30,45 @@ import URI.Path.Segment (segmentNZFromString)
 import URI.Path.Segment as PathSegment
 import URI.Scheme as Scheme
 import URI.URIRef (URIRefOptions)
+import Web.DOM.Document (toParentNode)
+import Web.DOM.ParentNode (ParentNode, querySelector)
+import Web.HTML (window)
+import Web.HTML.HTMLAnchorElement (toHTMLElement)
+import Web.HTML.HTMLElement (fromElement)
+import Web.HTML.HTMLDocument (toDocument)
+import Web.HTML.Window (document)
 
-foreign import onload ∷ ∀ e a. Eff e a → Eff e a
+foreign import onload ∷ ∀ a. Effect a → Effect a
 
 type MainURIRef = URIRef UserInfo (HostPortPair Host Port) Path HierPath RelPath Query Fragment
 
 mainURIRefOptions ∷ Record (URIRefOptions UserInfo (HostPortPair Host Port) Path HierPath RelPath Query Fragment)
 mainURIRefOptions =
   { parseUserInfo: pure
-  , printUserInfo: id
+  , printUserInfo: identity
   , parseHosts: HostPortPair.parser pure pure
-  , printHosts: HostPortPair.print id id
+  , printHosts: HostPortPair.print identity identity
   , parsePath: pure
-  , printPath: id
+  , printPath: identity
   , parseHierPath: pure
-  , printHierPath: id
+  , printHierPath: identity
   , parseRelPath: pure
-  , printRelPath: id
+  , printRelPath: identity
   , parseQuery: pure
-  , printQuery: id
+  , printQuery: identity
   , parseFragment: pure
-  , printFragment: id
+  , printFragment: identity
   }
 
-mkLatLngs ∷ ∀ e. MaybeT (Eff (dom ∷ DOM, random ∷ RANDOM|e)) (Array LC.LatLng)
+mkLatLngs ∷ MaybeT Effect (Array LC.LatLng)
 mkLatLngs = do
   let inp = A.range 0 5
   start ← LC.mkLatLng (-37.87) 175.457
   lats ← F.for inp \_ → do
-    diff ← liftEff random
+    diff ← liftEffect random
     LC.mkDegrees $ diff / 100.0 - 37.87
   lngs ← F.for inp \_ → do
-    diff ← liftEff random
+    diff ← liftEffect random
     LC.mkDegrees $ diff / 100.0 + 175.457
   pure $ A.zipWith (\lat lng → {lat, lng}) lats lngs
 
@@ -96,12 +97,11 @@ iconConf =
   , iconSize: 40 × 40
   }
 core
-  ∷ ∀ e n
-  . IsParentNode n
-  ⇒ n
-  → MaybeT (Eff (dom ∷ DOM, random ∷ RANDOM|e)) Unit
+  ∷ ParentNode
+  → MaybeT Effect Unit
 core doc = void do
   el ← MaybeT $ querySelector (wrap "#map") doc
+  htmlEl ← MaybeT $ pure $ fromElement el
   tiles ← LC.tileLayer testURI
   latLng ← LC.mkLatLng (-37.87) 175.457
   i ← LC.icon iconConf
@@ -118,7 +118,7 @@ core doc = void do
   r2 ← LC.mkLatLng (-37.18) (176.00)
   r ← LC.rectangle r1 r2 { }
   zoom ← LC.mkZoom 12
-  LC.leaflet el
+  LC.leaflet htmlEl
     >>= LC.setView latLng
     >>= LC.setZoom zoom
     >>= LC.addLayer (LC.tileToLayer tiles)
@@ -130,14 +130,13 @@ core doc = void do
     >>= LC.addLayer (LC.rectangleToLayer r)
 
 heatmap
-  ∷ ∀ e n
-  . IsParentNode n
-  ⇒ n
-  → MaybeT (Eff (ref ∷ REF, dom ∷ DOM, random ∷ RANDOM, canvas ∷ CANVAS|e)) Unit
+  ∷ ParentNode
+  → MaybeT Effect Unit
 heatmap doc = void do
   el ← MaybeT $ querySelector (wrap "#heatmap-leaflet") doc
+  htmlEl ← MaybeT $ pure $ fromElement el
   view ← LC.mkLatLng (-37.87) (175.457)
-  leaf ← LC.leaflet el
+  leaf ← LC.leaflet htmlEl
   lay ← LC.layer
   layState ← LH.mkHeatmap LH.defaultOptions heatmapLayerData lay leaf
   tiles ← LC.tileLayer testURI
@@ -148,9 +147,9 @@ heatmap doc = void do
     >>= LC.addLayer lay
     >>= LC.removeLayer lay
 
-main ∷ ∀ e.Eff (ref ∷ REF, canvas ∷ CANVAS, dom ∷ DOM, random ∷ RANDOM|e) Unit
+main ∷ Effect Unit
 main = onload do
   doc ← window >>= document
   void $ runMaybeT do
-    core doc
-    heatmap doc
+    core $ toParentNode $ toDocument $ doc
+    heatmap $ toParentNode $ toDocument $ doc

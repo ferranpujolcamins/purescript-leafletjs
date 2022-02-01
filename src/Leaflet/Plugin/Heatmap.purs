@@ -1,36 +1,33 @@
 module Leaflet.Plugin.Heatmap
   ( mkHeatmap
   , module C
-  ) where
+  )
+  where
 
 import Prelude
 
-import Effect (Effect)
-import Effect.Class (class MonadEffect, liftEffect)
-import Effect.Ref (Ref)
 import Control.Monad.Maybe.Trans (MaybeT(..), runMaybeT)
-
 import Data.Array as A
 import Data.Foldable (class Foldable, for_, intercalate)
 import Data.Int as Int
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
-import Foreign.Object as SM
 import Data.Tuple (fst, snd)
-
-import Web.DOM (DOM)
-import Web.DOM.Element (setAttribute)
-import Web.DOM.Node (appendChild, removeChild)
-
+import Effect (Effect)
+import Effect.Class (class MonadEffect, liftEffect)
+import Effect.Ref (Ref)
+import Foreign.Object as Foreign
 import Leaflet.Core as LC
 import Leaflet.Plugin.Heatmap.Internal.Canvas as C
 import Leaflet.Util ((∘), (×), type (×))
-
 import Math as Math
+import Web.DOM.Element (setAttribute)
+import Web.DOM.Node (appendChild, removeChild)
+import Web.HTML.HTMLElement (toElement, toNode)
 
 mkHeatmap
-  ∷ ∀ e m f
-  . MonadEff (dom ∷ DOM, ref ∷ REF, canvas ∷ C.CANVAS|e) m
+  ∷ ∀ m f
+  . MonadEffect m
   ⇒ Foldable f
   ⇒ C.HeatmapOptions
   → f { lat ∷ LC.Degrees, lng ∷ LC.Degrees, i ∷ Number }
@@ -40,21 +37,21 @@ mkHeatmap
 mkHeatmap opts items lay leaf =
   LC.onAddRemove (onAdd opts items) onRemove lay leaf
 
-onRemove ∷ ∀ e. LC.Layer → LC.Leaflet → Maybe C.CanvasElement → Eff (dom ∷ DOM|e) Unit
+onRemove ∷ LC.Layer → LC.Leaflet → Maybe C.CanvasElement → Effect Unit
 onRemove _ leaf mbCanvas = do
   panes ← LC.getPanes leaf
   for_ mbCanvas \canvas →
-    for_ (SM.lookup "overlayPane" panes) $ removeChild $ C.canvasToElement canvas
+    for_ (toNode <$> (Foreign.lookup "overlayPane" panes)) $ removeChild $ toNode $ C.canvasToElement canvas
   pure unit
 
 onAdd
-  ∷ ∀ e f
+  ∷ ∀ f
   . Foldable f
   ⇒ C.HeatmapOptions
   → f { lat ∷ LC.Degrees, lng ∷ LC.Degrees, i ∷ Number }
   → LC.Layer
   → LC.Leaflet
-  → Eff (dom ∷ DOM, canvas ∷ C.CANVAS|e) C.CanvasElement
+  → Effect C.CanvasElement
 onAdd opts items lay leaf = do
   originProp ←
     LC.testProp [ "transformOrigin", "WebkitTransformOrigin", "msTransformOrigin" ]
@@ -67,8 +64,8 @@ onAdd opts items lay leaf = do
     LC.setStyle p "50% 50%" canvasEl
 
   x × y ← LC.getSize leaf
-  _ ← C.setCanvasWidth (Int.toNumber x) canvas
-  _ ← C.setCanvasHeight (Int.toNumber y) canvas
+  _ ← C.setCanvasWidth canvas (Int.toNumber x)
+  _ ← C.setCanvasHeight canvas (Int.toNumber y)
 
   threeD ← LC.any3d
   isZoom ← LC.zoomAnimation leaf
@@ -79,17 +76,17 @@ onAdd opts items lay leaf = do
 
   setAttribute "class"
     (intercalate " " [ "leaflet-ps-heatmap-layer", "leaflet-layer", animClass ])
-    canvasEl
+    (toElement canvasEl)
 
   panes ← LC.getPanes leaf
-  for_ (SM.lookup "overlayPane" panes) $ appendChild canvasEl
+  for_ (toNode <$> (Foreign.lookup "overlayPane" panes)) $ appendChild $ toNode canvasEl
 
   let
     reset _ = do
       topLeft ← LC.containerPointToLayerPoint (0 × 0) leaf
       mapSize ← LC.getSize leaf
-      _ ← C.setCanvasWidth (Int.toNumber x) canvas
-      _ ← C.setCanvasHeight (Int.toNumber y) canvas
+      _ ← C.setCanvasWidth canvas (Int.toNumber x)
+      _ ← C.setCanvasHeight canvas (Int.toNumber y)
       LC.setPosition canvasEl topLeft
       redraw canvas items opts leaf
 
@@ -110,13 +107,13 @@ onAdd opts items lay leaf = do
   pure canvas
 
 redraw
-  ∷ ∀ e f
+  ∷ ∀ f
   . Foldable f
   ⇒ C.CanvasElement
   → f { lng ∷ LC.Degrees, lat ∷ LC.Degrees, i ∷ Number }
   → C.HeatmapOptions
   → LC.Leaflet
-  → Eff (dom ∷ DOM, canvas ∷ C.CANVAS|e) Unit
+  → Effect Unit
 redraw el items opts leaf = do
   size ← LC.getSize leaf
   maxZoom ← map LC.zoomToNumber $ LC.getMaxZoom leaf
@@ -153,8 +150,7 @@ redraw el items opts leaf = do
     foldFn
       ∷ Map.Map (Int × Int) { x ∷ Number, y ∷ Number, i ∷ Number }
       → { lat ∷ LC.Degrees, lng ∷ LC.Degrees, i ∷ Number }
-      → Eff (dom ∷ DOM, canvas ∷ C.CANVAS|e)
-          (Map.Map (Int × Int) { x ∷ Number, y ∷ Number, i ∷ Number })
+      → Effect (Map.Map (Int × Int) { x ∷ Number, y ∷ Number, i ∷ Number })
     foldFn acc { lat, lng, i} = do
       p@(px × py) ← LC.latLngToContainerPoint {lat, lng} leaf
       if not $ LC.contains bounds p
@@ -168,7 +164,7 @@ redraw el items opts leaf = do
 
     groupPoints
       ∷ Array { lat ∷ LC.Degrees, lng ∷ LC.Degrees, i ∷ Number }
-      → Eff (dom ∷ DOM, canvas ∷ C.CANVAS|e) (Array { x ∷ Number, y ∷ Number, i ∷ Number })
+      → Effect (Array { x ∷ Number, y ∷ Number, i ∷ Number })
     groupPoints is =
       map (A.fromFoldable ∘ Map.values) $ A.foldRecM foldFn Map.empty is
 
@@ -183,7 +179,7 @@ redraw el items opts leaf = do
 
   grouppedPoints ← groupPoints $ A.fromFoldable items
 
-  liftEff
+  liftEffect
     $ C.draw el opts
     $ map adjustPoints
     $ grouppedPoints
